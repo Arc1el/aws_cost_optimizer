@@ -69,12 +69,20 @@ router.get('/ec2/:region_seq/:id', async function (req, res, next) {
       const instanceId = instance.InstanceId;
       process.stdout.write("instance : " + instanceId);
       // const instanceName = instance.Tags[0].Value;
-      if(instance.Tags["Name"].Value){
-        var instanceName = instance.Tags["Name"].Value;
+      // if(instance.Tags["Name"].Value){
+      //   var instanceName = instance.Tags["Name"].Value;
+      // }
+      // else{
+      //   var instanceName = instance.Tags[0].Value;
+      // }
+      let instanceName = null;
+      for (const tag of data.Tags) {
+        if (tag.Key === 'Name') {
+          instanceName = tag.Value;
+          break;
+        }
       }
-      else{
-        var instanceName = instance.Tags[0].Value;
-      }
+      if (!instanceName) { instanceName = instance.Tags[0].Value }
       const instanceType = instance.InstanceType;
       const instanceData = {
         region: switchRegion,
