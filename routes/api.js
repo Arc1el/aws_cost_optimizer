@@ -76,7 +76,7 @@ router.get('/ec2/:region_seq/:id', async function (req, res, next) {
       //   var instanceName = instance.Tags[0].Value;
       // }
       let instanceName = null;
-      for (const tag of data.Tags) {
+      for (const tag of instance.Tags) {
         if (tag.Key === 'Name') {
           instanceName = tag.Value;
           break;
