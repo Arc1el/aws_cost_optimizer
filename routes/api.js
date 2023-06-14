@@ -65,6 +65,7 @@ router.get('/ec2/:region_seq/:id', async function (req, res, next) {
     }, []);
     console.log("Get EC2 Instances...");
     for (const instance of instances) {
+      console.log(instance);
       const instanceId = instance.InstanceId;
       process.stdout.write("instance : " + instanceId);
       // const instanceName = instance.Tags[0].Value;
