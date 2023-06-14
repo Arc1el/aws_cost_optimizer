@@ -467,9 +467,9 @@
           console.log(number);
           var url = "api/ec2/" + number + "/" + role;
           var xhr = new XMLHttpRequest();
-          const spanEle = document.createElement('span');
-          spanEle.innerHTML = "<br>📊 Generating Tables ....<br>"
-          costContainer.insertBefore(spanEle, costContainer.firstChild);
+          // const spanEle = document.createElement('span');
+          // spanEle.innerHTML = "<br>📊 Generating Tables ....<br>"
+          // costContainer.insertBefore(spanEle, costContainer.firstChild);
           xhr.onreadystatechange = function() { 
             if(xhr.readyState === 4 && xhr.status === 200) {
               console.log("리퀘스트 시작 number : ", number)
@@ -478,6 +478,9 @@
               if (table && table.tBodies.length > 0 && table.tBodies[0].rows.length > 0) {
                   // 테이블에 내용이 존재하는 경우
                   tableContainer.appendChild(table);
+                  const spanEle = document.createElement('span');
+                  spanEle.innerHTML = "<br>📊 Generating Tables ....<br>"
+                  costContainer.insertBefore(spanEle, costContainer.firstChild);
                   console.log("테이블에 내용이 있습니다.");
               } else {
                   // 테이블에 내용이 없는 경우
