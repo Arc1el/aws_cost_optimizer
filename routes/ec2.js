@@ -2757,4 +2757,9 @@ function mkdir( dirPath ) {
   }
 }
 
+router.use((req, res, next) => {
+  // Middleware logic here
+  next(); // Call next() to pass control to the next middleware or route handler
+});
+
 module.exports = router;
