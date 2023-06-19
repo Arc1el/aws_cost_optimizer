@@ -150,18 +150,21 @@ router.get('/ec2/:region_seq/:id', async function (req, res, next) {
         const paramsCW = {
           MetricWidget: JSON.stringify(widgetDefinition)
         };
+        
+        if (MetricName === 'mem_used_percent'){
+          const { MetricWidgetImage: image } = await cloudwatch_agent.getMetricWidgetImage(paramsCW).promise();
       
-        const { MetricWidgetImage: image } = await cloudwatch_agent.getMetricWidgetImage(paramsCW).promise();
-      
-        process.stdout.write(`...`);
-      
-        const fileName = `${MetricName}_chart.png`;
-        fs.writeFile(`./chart/${req.params.id}/${instanceId}/${fileName}`, image, 'base64', (err) => {
-          process.stdout.write(`OK`);
-          if (err) {
-            console.log('Error', err);
-          }
-        });
+          process.stdout.write(`...`);
+        
+          const fileName = `${MetricName}_chart.png`;
+          fs.writeFile(`./chart/${req.params.id}/${instanceId}/${fileName}`, image, 'base64', (err) => {
+            process.stdout.write(`OK`);
+            if (err) {
+              console.log('Error', err);
+            }
+          })
+        
+        };
       
         // 메트릭의 최댓값을 가져옵니다
         const params = {
