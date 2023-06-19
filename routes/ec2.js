@@ -157,6 +157,7 @@ router.get('/ec2/:region_seq/:id', async function (req, res, next) {
       
         const fileName = `${MetricName}_chart.png`;
         fs.writeFile(`./chart/${req.params.id}/${instanceId}/${fileName}`, image, 'base64', (err) => {
+          process.stdout.write(`OK`);
           if (err) {
             console.log('Error', err);
           }
@@ -1485,10 +1486,10 @@ function proposeLowerInstanceType(currentInstanceType) {
     "t2.nano" : "t3.nano",
     "t2.micro" : "t3.micro",
     "t2.small" : "t3.micro",
-    "t2.medium" : "t2.small",
-    "t2.large" : "t2.medium",
-    "t2.xlarge" : "t2.large",
-    "t2.2xlarge" : "t2.xlarge",
+    "t2.medium" : "t3.small",
+    "t2.large" : "t3.medium",
+    "t2.xlarge" : "t3.large",
+    "t2.2xlarge" : "t3.xlarge",
     //T3
     "t3.nano" : "t3.nano",
     "t3.micro" : "t3.micro",
