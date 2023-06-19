@@ -35,6 +35,7 @@ const regions = {
 };
 
 router.get('/ec2/:region_seq/:id', async function (req, res, next) {
+  req.setTimeout(1000000);
   try {
     const currentTimeStamp = Date.now();
     const region = Object.keys(regions)[req.params.region_seq];
