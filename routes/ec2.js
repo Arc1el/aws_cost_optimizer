@@ -83,7 +83,9 @@ router.get('/ec2/:region_seq/:id', async function (req, res, next) {
         instanceType: instanceType,
         nowCost: parseFloat(prices[instanceType]).toFixed(3),
         proposedInstanceType: null,
-        proposedCost: null
+        proposedCost: null,
+        maxCpuUsage : null, 
+        mem_maximum : null,
       };
 
       const widgetDefinition = {
@@ -113,9 +115,83 @@ router.get('/ec2/:region_seq/:id', async function (req, res, next) {
           console.log('Error', err);
         }
       });
+      process.stdout.write("OK / ");
 
+      const cloudwatch_agent = new AWS.CloudWatch();
+      mkdir(`./chart/${req.params.id}/${instanceId}`);
       const endTime = new Date();
       const startTime = new Date(endTime.getTime() - (14 * 24 * 60 * 60 * 1000));
+      // 모든 메트릭을 가져옵니다
+      const { Metrics: allMetrics } = await cloudwatch_agent.listMetrics().promise();
+
+      const filteredMetrics = allMetrics.filter(
+        metric => !metric.Namespace.startsWith('AWS/') && metric.MetricName === 'mem_used_percent'
+      );
+      
+      // 필터링된 메트릭을 기반으로 개별 차트를 생성합니다
+      process.stdout.write(`Generating chart for Memory Usage`);
+      for (const metric of filteredMetrics) {
+        const { Namespace, MetricName } = metric;
+      
+        const widgetDefinition = {
+          width: 800,
+          height: 400,
+          start: '-P14D',
+          end: 'P0D',
+          periodOverride: '1D',
+          stacked: false,
+          metrics: [
+            [Namespace, MetricName, 'InstanceId', instanceId, { stat: 'Maximum' }]
+          ],
+          view: 'timeSeries',
+          stacked: false
+        };
+      
+        const paramsCW = {
+          MetricWidget: JSON.stringify(widgetDefinition)
+        };
+      
+        const { MetricWidgetImage: image } = await cloudwatch_agent.getMetricWidgetImage(paramsCW).promise();
+      
+        process.stdout.write(`...`);
+      
+        const fileName = `${MetricName}_chart.png`;
+        fs.writeFile(`./chart/${req.params.id}/${instanceId}/${fileName}`, image, 'base64', (err) => {
+          if (err) {
+            console.log('Error', err);
+          }
+        });
+      
+        // 메트릭의 최댓값을 가져옵니다
+        const params = {
+          EndTime: endTime,
+          MetricName: MetricName,
+          Namespace: Namespace,
+          Period: 86400,
+          StartTime: startTime,
+          Statistics: ['Maximum'],
+          Dimensions: [
+            {
+              Name: 'InstanceId',
+              Value: instanceId
+            }
+          ],
+          Unit: 'Percent'
+        };
+      
+        const cloudWatchData = await cloudwatch_agent.getMetricStatistics(params).promise();
+      
+        const maxMetricValue = cloudWatchData.Datapoints.reduce((max, datapoint) => {
+          return datapoint.Maximum > max ? datapoint.Maximum : max;
+        }, 0);
+      
+        instanceData.mem_maximum = maxMetricValue.toFixed(2) + " %";
+      }
+      
+      if (filteredMetrics.length === 0) {
+        console.log(" No 'mem_used_percent' metrics found.");
+      }
+      
       const params = {
         EndTime: endTime,
         MetricName: 'CPUUtilization',
@@ -164,6 +240,7 @@ router.get('/ec2/:region_seq/:id', async function (req, res, next) {
     console.log("=================================================================================");
     res.json(result);
   } catch (error) {
+    console.log(error.message);
     console.log("Unable to retrieve ec2 information. Maybe ec2 doesn't exist")
     console.log("=================================================================================");
     res.json([]);

@@ -142,75 +142,75 @@
     }
 
     const container = document.getElementById("checkboxContainer");
-  const table = document.createElement("table");
-  table.classList.add("checkbox");
-  container.appendChild(table);
+    const table = document.createElement("table");
+    table.classList.add("checkbox");
+    container.appendChild(table);
 
-  let row;
-  let count = 0;
+    let row;
+    let count = 0;
 
-  const numbers = [];
+    const numbers = [];
 
-  for (const key in regions_str) {
-    if (count % 3 === 0) {
-      row = document.createElement("tr");
-      table.appendChild(row);
+    for (const key in regions_str) {
+      if (count % 3 === 0) {
+        row = document.createElement("tr");
+        table.appendChild(row);
+      }
+
+      const cell = document.createElement("td");
+      const checkbox = document.createElement("input");
+      checkbox.type = "checkbox";
+      checkbox.value = key;
+      checkbox.addEventListener("change", function() {
+        const keyValue = parseInt(this.value);
+        const index = numbers.indexOf(keyValue);
+
+        if (this.checked && index === -1) {
+          numbers.push(keyValue);
+        } else if (!this.checked && index > -1) {
+          numbers.splice(index, 1);
+        }
+      });
+      cell.appendChild(checkbox);
+
+      const label = document.createElement("label");
+      label.innerHTML = regions_str[key];
+      label.addEventListener("click", function() {
+        checkbox.checked = !checkbox.checked;
+
+        const keyValue = parseInt(checkbox.value);
+        const index = numbers.indexOf(keyValue);
+
+        if (checkbox.checked && index === -1) {
+          numbers.push(keyValue);
+        } else if (!checkbox.checked && index > -1) {
+          numbers.splice(index, 1);
+        }
+      });
+      cell.appendChild(label);
+
+      row.appendChild(cell);
+
+      count++;
     }
 
-    const cell = document.createElement("td");
-    const checkbox = document.createElement("input");
-    checkbox.type = "checkbox";
-    checkbox.value = key;
-    checkbox.addEventListener("change", function() {
-      const keyValue = parseInt(this.value);
-      const index = numbers.indexOf(keyValue);
+    const toggleButton = document.getElementById("toggleButton");
+    toggleButton.innerHTML = "Toggle Checkboxes";
+    toggleButton.addEventListener("click", function() {
+      const checkboxes = document.querySelectorAll("input[type='checkbox']");
+      checkboxes.forEach(function(checkbox) {
+        checkbox.checked = !checkbox.checked;
 
-      if (this.checked && index === -1) {
-        numbers.push(keyValue);
-      } else if (!this.checked && index > -1) {
-        numbers.splice(index, 1);
-      }
+        const keyValue = parseInt(checkbox.value);
+        const index = numbers.indexOf(keyValue);
+
+        if (checkbox.checked && index === -1) {
+          numbers.push(keyValue);
+        } else if (!checkbox.checked && index > -1) {
+          numbers.splice(index, 1);
+        }
+      });
     });
-    cell.appendChild(checkbox);
-
-    const label = document.createElement("label");
-    label.innerHTML = regions_str[key];
-    label.addEventListener("click", function() {
-      checkbox.checked = !checkbox.checked;
-
-      const keyValue = parseInt(checkbox.value);
-      const index = numbers.indexOf(keyValue);
-
-      if (checkbox.checked && index === -1) {
-        numbers.push(keyValue);
-      } else if (!checkbox.checked && index > -1) {
-        numbers.splice(index, 1);
-      }
-    });
-    cell.appendChild(label);
-
-    row.appendChild(cell);
-
-    count++;
-  }
-
-  const toggleButton = document.getElementById("toggleButton");
-  toggleButton.innerHTML = "Toggle Checkboxes";
-  toggleButton.addEventListener("click", function() {
-    const checkboxes = document.querySelectorAll("input[type='checkbox']");
-    checkboxes.forEach(function(checkbox) {
-      checkbox.checked = !checkbox.checked;
-
-      const keyValue = parseInt(checkbox.value);
-      const index = numbers.indexOf(keyValue);
-
-      if (checkbox.checked && index === -1) {
-        numbers.push(keyValue);
-      } else if (!checkbox.checked && index > -1) {
-        numbers.splice(index, 1);
-      }
-    });
-  });
 
 
 
@@ -359,7 +359,7 @@
       var tr = document.createElement("tr");
       
       // Set table headers
-      var headers = ["리전", "인스턴스이름", "인스턴스아이디", "기존 유형", "가격", "추천유형", "가격", "2주 CPU", "2주 CPU 최대 사용량 차트"];
+      var headers = ["리전", "인스턴스이름", "인스턴스아이디", "기존 유형", "가격", "추천유형", "가격", "2주 CPU", "2주 MEM", "2주 CPU 최대 사용량 차트", "2주 MEM 최대 사용량 차트"];
       headers.forEach(function(header) {
         var th = document.createElement("th");
         th.textContent = header;
@@ -398,6 +398,7 @@
         var image = document.createElement("img");
         var img_src = "/" + role + "/" + id + "/chart.png"
         image.src = img_src;
+        image.alt = "No Data";
         image.style.maxWidth = "100%"; // 이미지의 최대 가로 크기를 설정합니다.
         image.style.height = "auto"; // 이미지의 세로 크기를 자동으로 조정합니다.
 
@@ -407,45 +408,61 @@
 
         chart.appendChild(image);
         tr.appendChild(chart);
+
+        var mem_chart = document.createElement("td");
+        var mem_image = document.createElement("img");
+        var mem_img_src = "/" + role + "/" + id + "/mem_used_percent_chart.png"
+        
+        mem_image.src = mem_img_src;
+        mem_image.alt = "No Data";
+        mem_image.style.maxWidth = "100%"; // 이미지의 최대 가로 크기를 설정합니다.
+        mem_image.style.height = "auto"; // 이미지의 세로 크기를 자동으로 조정합니다.
+
+        window.addEventListener("resize", function() {
+          mem_image.style.maxWidth = "80%";
+        });
+
+        mem_chart.appendChild(mem_image);
+        tr.appendChild(mem_chart);
         if(gen_flag){
           tbody.appendChild(tr);
         } 
       });
 
-      var colgroup = document.createElement('colgroup');
+      // var colgroup = document.createElement('colgroup');
 
-      // 각 칸의 너비 비율 설정
-      var col1 = document.createElement('col');
-      col1.style.width = '5%';
-      var col2 = document.createElement('col');
-      col2.style.width = '10%';
-      var col3 = document.createElement('col');
-      col3.style.width = '10%';
-      var col4 = document.createElement('col');
-      col4.style.width = '10%';
-      var col5 = document.createElement('col');
-      col5.style.width = '10%';
-      var col6 = document.createElement('col');
-      col6.style.width = '10%';
-      var col7 = document.createElement('col');
-      col7.style.width = '10%';
-      var col8 = document.createElement('col');
-      col8.style.width = '10%';
-      var col9 = document.createElement('col');
-      col9.style.width = '25%';
+      // // 각 칸의 너비 비율 설정
+      // var col1 = document.createElement('col');
+      // col1.style.width = '5%';
+      // var col2 = document.createElement('col');
+      // col2.style.width = '10%';
+      // var col3 = document.createElement('col');
+      // col3.style.width = '10%';
+      // var col4 = document.createElement('col');
+      // col4.style.width = '10%';
+      // var col5 = document.createElement('col');
+      // col5.style.width = '10%';
+      // var col6 = document.createElement('col');
+      // col6.style.width = '10%';
+      // var col7 = document.createElement('col');
+      // col7.style.width = '10%';
+      // var col8 = document.createElement('col');
+      // col8.style.width = '10%';
+      // var col9 = document.createElement('col');
+      // col9.style.width = '25%';
 
-      colgroup.appendChild(col1);
-      colgroup.appendChild(col2);
-      colgroup.appendChild(col3);
-      colgroup.appendChild(col4);
-      colgroup.appendChild(col5);
-      colgroup.appendChild(col6);
-      colgroup.appendChild(col7);
-      colgroup.appendChild(col8);
-      colgroup.appendChild(col9);
+      // colgroup.appendChild(col1);
+      // colgroup.appendChild(col2);
+      // colgroup.appendChild(col3);
+      // colgroup.appendChild(col4);
+      // colgroup.appendChild(col5);
+      // colgroup.appendChild(col6);
+      // colgroup.appendChild(col7);
+      // colgroup.appendChild(col8);
+      // colgroup.appendChild(col9);
 
       table.appendChild(tbody);
-      table.appendChild(colgroup);
+      // table.appendChild(colgroup);
       table.classList.add("csv");
 
       return table;
@@ -468,7 +485,7 @@
           var url = "api/ec2/" + number + "/" + role;
           var xhr = new XMLHttpRequest();
           const spanEle = document.createElement('span');
-          spanEle.innerHTML = "<br>📊 Generating Tables ....<br>"
+          spanEle.innerHTML = "<br><br><img src='./loading.gif' width='15px'/> Generating Tables .... This job can take a lot of time if memory usage information exists....<br>"
           costContainer.insertBefore(spanEle, costContainer.firstChild);
           xhr.onreadystatechange = function() { 
             if(xhr.readyState === 4 && xhr.status === 200) {
