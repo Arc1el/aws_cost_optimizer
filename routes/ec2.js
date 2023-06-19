@@ -48,8 +48,8 @@ router.get('/ec2/:region_seq/:id', async function (req, res, next) {
       return result;
     }, {});
 
-    console.log("=================================================================================" +
-      "\nGet Price Data Successfully! Time : " + currentTimeStamp + " / Region : " + region );
+    console.log(`=================================================================================
+      \nGet Price Data Successfully! Time : ${currentTimeStamp} / Region : ${region}`);
 
     const switchRegion = regions[Object.keys(regions)[req.params.region_seq]];
     AWS.config.update({ region: switchRegion });
@@ -59,14 +59,11 @@ router.get('/ec2/:region_seq/:id', async function (req, res, next) {
     const ec2 = new AWS.EC2();
     const result = [];
     const data = await ec2.describeInstances({ Filters: [{ Name: 'instance-state-name', Values: ['running'] }] }).promise();
-    const instances = data.Reservations.reduce((acc, reservation) => {
-      acc.push(...reservation.Instances);
-      return acc;
-    }, []);
+    const instances = data.Reservations.flatMap((reservation) => reservation.Instances);
     console.log("Get EC2 Instances...");
     for (const instance of instances) {
       const instanceId = instance.InstanceId;
-      process.stdout.write("instance : " + instanceId);
+      process.stdout.write(`instance : ${instanceId}`);
       let instanceName = null;
       for (const tag of instance.Tags) {
         if (tag.Key === 'Name') {
@@ -84,8 +81,8 @@ router.get('/ec2/:region_seq/:id', async function (req, res, next) {
         nowCost: parseFloat(prices[instanceType]).toFixed(3),
         proposedInstanceType: null,
         proposedCost: null,
-        maxCpuUsage : null, 
-        mem_maximum : null,
+        maxCpuUsage: null,
+        mem_maximum: null,
       };
 
       const widgetDefinition = {
@@ -117,22 +114,22 @@ router.get('/ec2/:region_seq/:id', async function (req, res, next) {
       });
       process.stdout.write("OK / ");
 
-      const cloudwatch_agent = new AWS.CloudWatch();
+      const cloudwatchAgent = new AWS.CloudWatch();
       mkdir(`./chart/${req.params.id}/${instanceId}`);
       const endTime = new Date();
       const startTime = new Date(endTime.getTime() - (14 * 24 * 60 * 60 * 1000));
-      // 모든 메트릭을 가져옵니다
-      const { Metrics: allMetrics } = await cloudwatch_agent.listMetrics().promise();
+      // Get all metrics
+      const { Metrics: allMetrics } = await cloudwatchAgent.listMetrics().promise();
 
       const filteredMetrics = allMetrics.filter(
         metric => !metric.Namespace.startsWith('AWS/') && metric.MetricName === 'mem_used_percent'
       );
-      
-      // 필터링된 메트릭을 기반으로 개별 차트를 생성합니다
+
+      // Generate individual charts based on filtered metrics
       process.stdout.write(`Generating chart for Memory Usage`);
       for (const metric of filteredMetrics) {
         const { Namespace, MetricName } = metric;
-      
+
         const widgetDefinition = {
           width: 800,
           height: 400,
@@ -146,56 +143,27 @@ router.get('/ec2/:region_seq/:id', async function (req, res, next) {
           view: 'timeSeries',
           stacked: false
         };
-      
-        const paramsCW = {
+
+        var mem_paramsCW = {
           MetricWidget: JSON.stringify(widgetDefinition)
         };
         
-        if (MetricName === 'mem_used_percent'){
-          const { MetricWidgetImage: image } = await cloudwatch_agent.getMetricWidgetImage(paramsCW).promise();
-      
-          process.stdout.write(`...`);
-        
-          const fileName = `${MetricName}_chart.png`;
-          fs.writeFile(`./chart/${req.params.id}/${instanceId}/${fileName}`, image, 'base64', (err) => {
-            process.stdout.write(`OK`);
-            if (err) {
-              console.log('Error', err);
-            }
-          })
-        
-        };
-      
-        // 메트릭의 최댓값을 가져옵니다
-        const params = {
-          EndTime: endTime,
-          MetricName: MetricName,
-          Namespace: Namespace,
-          Period: 86400,
-          StartTime: startTime,
-          Statistics: ['Maximum'],
-          Dimensions: [
-            {
-              Name: 'InstanceId',
-              Value: instanceId
-            }
-          ],
-          Unit: 'Percent'
-        };
-      
-        const cloudWatchData = await cloudwatch_agent.getMetricStatistics(params).promise();
-      
-        const maxMetricValue = cloudWatchData.Datapoints.reduce((max, datapoint) => {
-          return datapoint.Maximum > max ? datapoint.Maximum : max;
-        }, 0);
-      
-        instanceData.mem_maximum = maxMetricValue.toFixed(2) + " %";
       }
-      
+      const { MetricWidgetImage: mem_image } = await cloudwatchAgent.getMetricWidgetImage(mem_paramsCW).promise();
+
+        const fileName = `mem_used_percent_chart.png`;
+        fs.writeFile(`./chart/${req.params.id}/${instanceId}/${fileName}`, mem_image, 'base64', (err) => {
+          process.stdout.write(`...OK`);
+          if (err) {
+            console.log('Error', err);
+          }
+        });
+      ;
+
       if (filteredMetrics.length === 0) {
         console.log(" No 'mem_used_percent' metrics found.");
       }
-      
+
       const params = {
         EndTime: endTime,
         MetricName: 'CPUUtilization',
@@ -234,22 +202,22 @@ router.get('/ec2/:region_seq/:id', async function (req, res, next) {
           instanceData.proposedCost = parseFloat(prices[proposedType]).toFixed(3);
           instanceData.proposedInstanceType = "≡ " + proposedType;
         }
-        
+
         process.stdout.write(" / Collecting instance data...\n");
         result.push(instanceData);
       }
     }
 
-    // clearTimeout(timeout);
     console.log("=================================================================================");
     res.json(result);
   } catch (error) {
     console.log(error.message);
-    console.log("Unable to retrieve ec2 information. Maybe ec2 doesn't exist")
+    console.log("Unable to retrieve EC2 information. Maybe EC2 doesn't exist.");
     console.log("=================================================================================");
     res.json([]);
   }
 });
+
 
 function proposeHigherInstanceType(currentInstanceType) {
   //상위 인스턴스 정의. 세대업그레이드 포함
