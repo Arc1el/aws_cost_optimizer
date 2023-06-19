@@ -57,13 +57,11 @@ router.get('/ec2/:region_seq/:id', async function (req, res, next) {
       RoleArn: `arn:aws:iam::${req.params.id}:role/Smileshark-sysadmin`, // Replace with your ARN role
     });
     const ec2 = new AWS.EC2();
-    const result = []; // Move the result declaration here
+    const result = [];
     const data = await ec2.describeInstances({ Filters: [{ Name: 'instance-state-name', Values: ['running'] }] }).promise();
     const instances = data.Reservations.flatMap((reservation) => reservation.Instances);
     console.log("Get EC2 Instances...");
-
-    // Define a helper function to process each instance
-    const processInstance = async (instance) => {
+    for (const instance of instances) {
       const instanceId = instance.InstanceId;
       process.stdout.write(`instance : ${instanceId}`);
       let instanceName = null;
@@ -105,9 +103,8 @@ router.get('/ec2/:region_seq/:id', async function (req, res, next) {
         MetricWidget: JSON.stringify(widgetDefinition)
       };
       const cloudwatch = new AWS.CloudWatch();
-      await mkdir(`./chart/${req.params.id}/${instanceId}`);
-      try{
-        const { MetricWidgetImage: image } = await cloudwatch.getMetricWidgetImage(paramsCW).promise();
+      mkdir(`./chart/${req.params.id}/${instanceId}`);
+      const { MetricWidgetImage: image } = await cloudwatch.getMetricWidgetImage(paramsCW).promise();
 
       process.stdout.write(" / Generating chart...");
       fs.writeFile(`./chart/${req.params.id}/${instanceId}/chart.png`, image, 'base64', (err) => {
@@ -116,12 +113,9 @@ router.get('/ec2/:region_seq/:id', async function (req, res, next) {
         }
       });
       process.stdout.write("OK / ");
-      } catch (error) {
-        console.error('Error generating chart:', error);
-      }
-  
+
       const cloudwatchAgent = new AWS.CloudWatch();
-      await mkdir(`./chart/${req.params.id}/${instanceId}`);
+      mkdir(`./chart/${req.params.id}/${instanceId}`);
       const endTime = new Date();
       const startTime = new Date(endTime.getTime() - (14 * 24 * 60 * 60 * 1000));
       // Get all metrics
@@ -153,25 +147,25 @@ router.get('/ec2/:region_seq/:id', async function (req, res, next) {
         var mem_paramsCW = {
           MetricWidget: JSON.stringify(widgetDefinition)
         };
-        try{
-          const { MetricWidgetImage: mem_image } = await cloudwatchAgent.getMetricWidgetImage(mem_paramsCW).promise();
+        
+      }
+      if(mem_paramsCW){
+        const { MetricWidgetImage: mem_image } = await cloudwatchAgent.getMetricWidgetImage(mem_paramsCW).promise();
 
-          const fileName = `mem_used_percent_chart.png`;
+        const fileName = `mem_used_percent_chart.png`;
           fs.writeFile(`./chart/${req.params.id}/${instanceId}/${fileName}`, mem_image, 'base64', (err) => {
             process.stdout.write(`...OK`);
             if (err) {
               console.log('Error', err);
             }
           });
+        ;
 
-          if (filteredMetrics.length === 0) {
-            console.log(" No 'mem_used_percent' metrics found.");
-          } 
-        }catch(err){
-          console.error(err);
+        if (filteredMetrics.length === 0) {
+          console.log(" No 'mem_used_percent' metrics found.");
         }
-        
       }
+      
 
       const params = {
         EndTime: endTime,
@@ -197,56 +191,35 @@ router.get('/ec2/:region_seq/:id', async function (req, res, next) {
 
       if (maxCpuUsage !== 0) {
         instanceData.maxCpuUsage = maxCpuUsage.toFixed(2) + " %";
-      } else {
-        instanceData.maxCpuUsage = "0 %";
+
+        if (maxCpuUsage >= 80) {
+          const proposedType = proposeHigherInstanceType(instanceType);
+          instanceData.proposedCost = parseFloat(prices[proposedType]).toFixed(3);
+          instanceData.proposedInstanceType = "▲ " + proposedType;
+        } else if (maxCpuUsage <= 40) {
+          const proposedType = proposeLowerInstanceType(instanceType);
+          instanceData.proposedCost = parseFloat(prices[proposedType]).toFixed(3);
+          instanceData.proposedInstanceType = "▼ " + proposedType;
+        } else {
+          const proposedType = proposeNowInstanceType(instanceType);
+          instanceData.proposedCost = parseFloat(prices[proposedType]).toFixed(3);
+          instanceData.proposedInstanceType = "≡ " + proposedType;
+        }
+
+        process.stdout.write(" / Collecting instance data...\n");
+        result.push(instanceData);
       }
+    }
 
-      // Get Memory Utilization
-      const mem_params = {
-        EndTime: endTime,
-        MetricName: 'mem_used_percent',
-        Namespace: 'CWAgent',
-        Period: 86400, // 24 hours in seconds
-        StartTime: startTime,
-        Statistics: ['Maximum'],
-        Dimensions: [
-          {
-            Name: 'InstanceId',
-            Value: instanceId
-          }
-        ],
-        Unit: 'Percent'
-      };
-
-      const mem_cloudWatchData = await cloudwatch.getMetricStatistics(mem_params).promise();
-
-      const mem_maximum = mem_cloudWatchData.Datapoints.reduce((max, datapoint) => {
-        return datapoint.Maximum > max ? datapoint.Maximum : max;
-      }, 0);
-
-      if (mem_maximum !== 0) {
-        instanceData.mem_maximum = mem_maximum.toFixed(2) + " %";
-      } else {
-        instanceData.mem_maximum = "0 %";
-      }
-
-      result.push(instanceData); // Push the instanceData to the result array
-      process.stdout.write("OK\n");
-    };
-
-    // Iterate over each instance and process them in parallel
-    await Promise.all(instances.map(processInstance));
-
-    console.log("Data processing completed.");
-
-    // Send the result after all instances are processed
-    res.send(result);
+    console.log("=================================================================================");
+    res.json(result);
   } catch (error) {
-    console.error(error);
-    res.status(500).send('An error occurred while processing the request.');
+    console.log(error.message);
+    console.log("Unable to retrieve EC2 information. Maybe EC2 doesn't exist.");
+    console.log("=================================================================================");
+    res.json([]);
   }
 });
-
 
 
 function proposeHigherInstanceType(currentInstanceType) {
