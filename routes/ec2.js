@@ -149,20 +149,23 @@ router.get('/ec2/:region_seq/:id', async function (req, res, next) {
         };
         
       }
-      const { MetricWidgetImage: mem_image } = await cloudwatchAgent.getMetricWidgetImage(mem_paramsCW).promise();
+      if(mem_paramsCW){
+        const { MetricWidgetImage: mem_image } = await cloudwatchAgent.getMetricWidgetImage(mem_paramsCW).promise();
 
         const fileName = `mem_used_percent_chart.png`;
-        fs.writeFile(`./chart/${req.params.id}/${instanceId}/${fileName}`, mem_image, 'base64', (err) => {
-          process.stdout.write(`...OK`);
-          if (err) {
-            console.log('Error', err);
-          }
-        });
-      ;
+          fs.writeFile(`./chart/${req.params.id}/${instanceId}/${fileName}`, mem_image, 'base64', (err) => {
+            process.stdout.write(`...OK`);
+            if (err) {
+              console.log('Error', err);
+            }
+          });
+        ;
 
-      if (filteredMetrics.length === 0) {
-        console.log(" No 'mem_used_percent' metrics found.");
+        if (filteredMetrics.length === 0) {
+          console.log(" No 'mem_used_percent' metrics found.");
+        }
       }
+      
 
       const params = {
         EndTime: endTime,
