@@ -485,7 +485,7 @@
           var url = "api/ec2/" + number + "/" + role;
           var xhr = new XMLHttpRequest();
           const spanEle = document.createElement('span');
-          spanEle.innerHTML = "<br><br><img src='./loading.gif' width='15px'/> Generating Tables .... This job can take a lot of time if memory usage information exists....<br>"
+          spanEle.innerHTML = "<br><br><img src='./loading.gif' width='15px'/> Generating Tables .... This job can take a few minutes if memory usage data exists....<br>"
           costContainer.insertBefore(spanEle, costContainer.firstChild);
           xhr.onreadystatechange = function() { 
             if(xhr.readyState === 4 && xhr.status === 200) {
@@ -508,6 +508,7 @@
               resolve(); // 이 부분을 추가하여 비동기 작업이 완료되었음을 알립니다.
             }
           };
+          xhr.timeout = Number.MAX_SAFE_INTEGER; 
           xhr.open("GET", url, true);
           xhr.send();
         }, 0);
