@@ -15,6 +15,8 @@ var rdsRouter = require('./routes/rds');
 require('express-async-errors');
 
 var app = express();
+app.io = require('socket.io')();
+
 
 // view engine setup
 app.set('views', path.join(__dirname, 'views'));
@@ -49,6 +51,33 @@ app.use(function(err, req, res, next) {
   // render the error page
   res.status(err.status || 500);
   res.render('error');
+});
+
+// EC2 Optimization Moudle
+var EC2 = require('./modules/ec2opt');
+
+app.io.on('connection', async (socket) => {
+  try{
+    console.log("socket connection established");
+    socket.on('disconnect', () =>{
+      console.log("socket disconnected");
+      socket.emit('log_health', () => {
+        return "socket";
+      })
+    });
+
+    socket.on('test', (data) => {
+      EC2.test({socket, data});
+    });
+
+    socket.on('ec2_opt_req', (data) => {
+      EC2.opt({socket, data});
+    })
+
+  }catch (e) {
+    logger.logging(e);
+    console.error(e);
+  }finally {}
 });
 
 module.exports = app;

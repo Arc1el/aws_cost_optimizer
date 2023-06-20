@@ -1,0 +1,86 @@
+* {
+  font-family: 'Noto Sans KR', sans-serif;
+}
+table {
+  border-collapse: collapse;
+  width: 100%;
+  vertical-align: middle;
+}
+
+th, td {
+  padding: 10px;
+  text-align: left;
+  border-bottom: 1px solid #ddd;
+  font-size: small;
+}
+
+th:nth-child(2), td:nth-child(4), td:nth-child(6){
+  text-align: center;
+}
+
+td:nth-child(7), td:nth-child(3){
+  padding-right: 20px;
+  text-align: right;
+}
+td:nth-child(5){
+  padding-right: 20px;
+  text-align: right;
+}
+
+th {
+  text-align: center;
+  background-color: #265E9A;
+  color: white;
+}
+
+.costTable td {
+  text-align: right;
+  font-size: small;
+}
+.costTable td:nth-child(1){
+  text-align: left;
+}
+.costTable th {
+  text-align: center;
+}
+.checkbox td, th {
+  text-align: left;
+}
+#ctrlContainer {
+  margin-top: 10px;
+  text-align: right;
+  vertical-align: middle;
+}
+input[type="button"]{
+    padding: 5px;
+    color: white;
+    background: #222f3f;
+    border: 1px #222f3f solid;
+    box-shadow: inset 0 1px 0 #222f3f;
+    border-radius: 5px;
+}
+
+input[type="button"] {
+    border: 1px #222f3f solid;
+    box-shadow: 0 1px 1px #EAEAEA, inset 0 1px 0 #222f3f;
+    background: #222f3f;
+}
+
+input[type="button"]:active {
+    box-shadow: inset 0 2px 5px #265E9A;
+    background: #265E9A;
+}
+input[type="text"]{
+    padding: 5px;
+    color: black;
+    border: 1px #222f3f solid;
+    border-radius: 5px;
+}
+#title_div {
+  padding: 10px;
+  color: white;
+  background-color: #265E9A;
+}
+th{
+  text-align: center;
+}
