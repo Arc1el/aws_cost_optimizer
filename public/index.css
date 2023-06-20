@@ -84,3 +84,7 @@ input[type="text"]{
 th{
   text-align: center;
 }
+
+#loadingdiv{
+  border-radius: 5px;
+}

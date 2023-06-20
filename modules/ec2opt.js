@@ -71,9 +71,11 @@ exports.opt = async function ({socket, data}){
     const data = await ec2.describeInstances({ Filters: [{ Name: 'instance-state-name', Values: ['running'] }] }).promise();
     const instances = data.Reservations.flatMap((reservation) => reservation.Instances);
     var counter = 0;
+    var estimated = 0;
     logger("Get EC2 Instances...", socket);
     for (const instance of instances) {
-      socket.emit("opt_ec2_list", {total_length : instances.length, length : counter++})
+      var startTime_esti = performance.now()
+      socket.emit("opt_ec2_list", {total_length : instances.length, length : ++counter, estimated : estimated * (instances.length - counter)}) 
       const instanceId = instance.InstanceId;
       logger(`instance : ${instanceId}`, socket);
       let instanceName = null;
@@ -249,6 +251,9 @@ exports.opt = async function ({socket, data}){
         process.stdout.write(" / Collecting instance data...\n");
         result.push(instanceData);
       }
+      var endTime_esti = performance.now()
+      estimated = endTime_esti - startTime_esti;
+      socket.emit("opt_ec2_list", {total_length : instances.length, length : counter, estimated : estimated * (instances.length - counter)});
     }
 
     logger("=================================================================================", socket);
