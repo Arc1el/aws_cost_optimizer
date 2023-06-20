@@ -58,8 +58,8 @@ exports.opt = async function ({socket, data}){
       return result;
     }, {});
 
-    console.log(`=================================================================================
-      \nGet Price Data Successfully! Time : ${currentTimeStamp} / Region : ${region}`);
+    logger(`=================================================================================
+    \nGet Price Data Successfully! Time : ${currentTimeStamp} / Region : ${region}`, socket);
 
     const switchRegion = regions[Object.keys(regions)[region_seq]];
     AWS.config.update({ region: switchRegion });
@@ -70,10 +70,12 @@ exports.opt = async function ({socket, data}){
     const result = [];
     const data = await ec2.describeInstances({ Filters: [{ Name: 'instance-state-name', Values: ['running'] }] }).promise();
     const instances = data.Reservations.flatMap((reservation) => reservation.Instances);
-    console.log("Get EC2 Instances...");
+    var counter = 0;
+    logger("Get EC2 Instances...", socket);
     for (const instance of instances) {
+      socket.emit("opt_ec2_list", {total_length : instances.length, length : counter++})
       const instanceId = instance.InstanceId;
-      process.stdout.write(`instance : ${instanceId}`);
+      logger(`instance : ${instanceId}`, socket);
       let instanceName = null;
       for (const tag of instance.Tags) {
         if (tag.Key === 'Name') {
@@ -116,13 +118,13 @@ exports.opt = async function ({socket, data}){
       mkdir(`./chart/${id}/${instanceId}`);
       const { MetricWidgetImage: image } = await cloudwatch.getMetricWidgetImage(paramsCW).promise();
 
-      process.stdout.write(" / Generating chart...");
+      logger(" / Generating chart...", socket);
       fs.writeFile(`./chart/${id}/${instanceId}/chart.png`, image, 'base64', (err) => {
         if (err) {
-          console.log('Error', err);
+          logger(err, socket);
         }
       });
-      process.stdout.write("OK / ");
+      logger("OK / ", socket);
 
       const cloudwatchAgent = new AWS.CloudWatch();
       mkdir(`./chart/${id}/${instanceId}`);
@@ -136,7 +138,7 @@ exports.opt = async function ({socket, data}){
       );
 
       // Generate individual charts based on filtered metrics
-      process.stdout.write(`Generating chart for Memory Usage`);
+      logger(`Generating chart for Memory Usage`, socket);
       for (const metric of filteredMetrics) {
         const { Namespace, MetricName } = metric;
 
@@ -164,15 +166,15 @@ exports.opt = async function ({socket, data}){
 
         const fileName = `mem_used_percent_chart.png`;
           fs.writeFile(`./chart/${id}/${instanceId}/${fileName}`, mem_image, 'base64', (err) => {
-            process.stdout.write(`...OK`);
+            logger(`...OK`, socket);
             if (err) {
-              console.log('Error', err);
+              logger(err, socket);
             }
           });
         ;
 
         if (filteredMetrics.length === 0) {
-          console.log(" No 'mem_used_percent' metrics found.");
+          logger(" No 'mem_used_percent' metrics found.", socket);
         }
       }
       
@@ -249,13 +251,13 @@ exports.opt = async function ({socket, data}){
       }
     }
 
-    console.log("=================================================================================");
+    logger("=================================================================================", socket);
     //res.json(result);
     socket.emit("send_opted_ec2", JSON.stringify(result));
   } catch (error) {
-    console.log(error.message);
-    console.log("Unable to retrieve EC2 information. Maybe EC2 doesn't exist.");
-    console.log("=================================================================================");
+    logger(error.message, socket);
+    logger("Unable to retrieve EC2 information. Maybe EC2 doesn't exist.", socket);
+    logger("=================================================================================", socket);
     //res.json([]);
     socket.emit("send_opted_ec2", JSON.stringify([]));
   }
