@@ -15,16 +15,27 @@ $(document).ready(function() {
 
   socket.on('opt_ec2_list', function (data){
     var total_length = data.total_length;
-    var now_length = data.length + 1;
+    var now_length = data.length;
+    var estimated_time = parseFloat(data.estimated / 1000).toFixed(2) + " Seconds";
     console.log("get opt list " + data);
     var spanEle = document.getElementById('loadingspan');
-    spanEle.innerHTML = `<br><img src='./loading.gif' width='15px'/> Generating Tables .... Process : ${now_length}/${total_length} <br>`
+    spanEle.innerHTML = `<br><img src='./loading.gif' width='15px'/> Generating Tables .... In Progress : ${now_length}/${total_length} .... Estimated Time : ${estimated_time}<br>`;
+    
     var loadingDiv = document.getElementById('loadingdiv');
-    loadingDiv.style.margin = "5px"
-    loadingDiv.style.width = `calc(${now_length}/${total_length} * 100%)`;
-    loadingDiv.style.height = "10px";
+    loadingDiv.style.margin = "5px";
     loadingDiv.style.backgroundColor = "#265E9A";
-  })
+
+    // Calculate the width transition duration based on the total length
+    var transitionDuration = total_length * 200 + "ms"; // Adjust the duration as per your preference
+    
+    // Apply transition style to the loadingDiv
+    loadingDiv.style.transition = "width " + transitionDuration + " ease";
+
+    // Use setTimeout to delay the width adjustment and trigger the animation
+    setTimeout(function() {
+        loadingDiv.style.width = `calc(${now_length}/${total_length} * 98%)`;
+    }, 0);
+  });
 
   $("#ok_btn").on("click", show);
   $("#down_csv").on("click", downloadTablesAsCSV);
@@ -371,7 +382,6 @@ $(document).ready(function() {
       const loadingDiv = document.createElement('div');
       loadingDiv.id = "loadingdiv"
       loadingDiv.style.margin = "5px"
-      loadingDiv.style.width = "100%";
       loadingDiv.style.height = "10px";
       loadingDiv.style.backgroundColor = "#265E9A";
       costContainer.insertBefore(loadingDiv, costContainer.firstChild);
