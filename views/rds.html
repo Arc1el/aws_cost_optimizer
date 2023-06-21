@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>SmileShark RDS 유형 최적화보고서</title>
+  <script src="http://code.jquery.com/jquery-1.11.1.js"></script>
+  <link href="index.css" rel="stylesheet" /> 
+  <script src="/rds.js"></script>
+  <script src="/socket.io/socket.io.js"></script>
+</head>
+<body>
+  <img src="./logo.png" width="20%" height="auto"/>
+  <div id="title_div" style="display: flex; align-items: center; justify-content: flex-end;">
+    <span style="margin-right: auto;"><b>RDS 타입 최적화</b></span>&nbsp;
+    <span>Account ID 입력&nbsp;</span> &nbsp;
+    <input type="text" id="rolearn" name="rolearn" placeholder="000000000000"/> &nbsp;
+    <input type="button" id="ok_btn" value="생성"/>&nbsp;
+    <input type="button" id="toggleButton" value="모두 선택/해제"/>&nbsp;
+    <input type="button" id="down_csv" value="Download CSV"/>
+  </div>
+  <div id="checkboxContainer"></div> 
+  <div id="rdsTotalCostContainer"><br></div><br>
+  <div id="rdsTableContainer"></div>
+  <script>
+    
+  </script>
+</body>
+</html>

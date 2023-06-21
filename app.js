@@ -55,6 +55,8 @@ app.use(function(err, req, res, next) {
 
 // EC2 Optimization Moudle
 var EC2 = require('./modules/ec2opt');
+// RDS Optimization Moudle
+var RDS = require('./modules/rdsopt');
 
 app.io.on('connection', async (socket) => {
   try{
@@ -72,6 +74,10 @@ app.io.on('connection', async (socket) => {
 
     socket.on('ec2_opt_req', (data) => {
       EC2.opt({socket, data});
+    })
+
+    socket.on('rds_opt_req', (data) => {
+      RDS.opt({socket, data});
     })
 
   }catch (e) {
