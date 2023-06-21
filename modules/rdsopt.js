@@ -113,8 +113,12 @@ exports.opt = async function ({socket, data}){
       try {
         const instances = await getAllRDSInstances();
         const allRDSData = [];
-    
+        const saveChartImagePromises = [];
+        var counter = 0;
+        var estimated = 0;
         for (const instance of instances) {
+          var startTime_esti = performance.now()
+          socket.emit("opt_rds_list", {total_length : instances.length, length : ++counter, estimated : estimated * (instances.length - counter)});
           const rdsData = {
             instance: {
               DBInstanceIdentifier: instance.DBInstanceIdentifier,
@@ -174,8 +178,8 @@ exports.opt = async function ({socket, data}){
               ],
             ],
           };
-          await saveChartImage(cpuChartOptions, `cpu_chart_${instance.DBInstanceIdentifier}.png`);
-    
+          const cpuChartPromise = saveChartImage(cpuChartOptions, `cpu_chart_${instance.DBInstanceIdentifier}.png`);
+
           // 최대 메모리 사용률 조회
           const memoryMetricParams = {
             MetricName: 'FreeableMemory',
@@ -220,7 +224,7 @@ exports.opt = async function ({socket, data}){
               ],
             ],
           };
-          await saveChartImage(memoryChartOptions, `memory_chart_${instance.DBInstanceIdentifier}.png`);
+          const memoryChartPromise = saveChartImage(memoryChartOptions, `memory_chart_${instance.DBInstanceIdentifier}.png`);
 
           // 최대 쓰기 지연 시간 조회
           const writeLatencyMetricParams = {
@@ -265,7 +269,7 @@ exports.opt = async function ({socket, data}){
               ],
             ],
           };
-          await saveChartImage(writeLatencyChartOptions, `write_latency_chart_${instance.DBInstanceIdentifier}.png`);
+          const writeLatencyChartPromise = saveChartImage(writeLatencyChartOptions, `write_latency_chart_${instance.DBInstanceIdentifier}.png`);
 
           // 최대 읽기 지연 시간 조회
           const readLatencyMetricParams = {
@@ -311,12 +315,14 @@ exports.opt = async function ({socket, data}){
               ],
             ],
           };
-          await saveChartImage(readLatencyChartOptions, `read_latency_chart_${instance.DBInstanceIdentifier}.png`);
-
-    
+          const readLatencyChartPromise = saveChartImage(readLatencyChartOptions, `read_latency_chart_${instance.DBInstanceIdentifier}.png`);
+          saveChartImagePromises.push(cpuChartPromise, memoryChartPromise, writeLatencyChartPromise, readLatencyChartPromise);
+          var endTime_esti = performance.now()
+          estimated = endTime_esti - startTime_esti
+          socket.emit("opt_rds_list", {total_length : instances.length, length : counter, estimated : estimated * (instances.length - counter)});
           allRDSData.push(rdsData);
         }
-    
+        await Promise.all(saveChartImagePromises);
         return allRDSData;
       } catch (error) {
         throw error;
