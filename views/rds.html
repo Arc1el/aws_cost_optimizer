@@ -3,7 +3,8 @@
 <head>
   <title>SmileShark RDS 유형 최적화보고서</title>
   <script src="http://code.jquery.com/jquery-1.11.1.js"></script>
-  <link href="index.css" rel="stylesheet" /> 
+  <link href="index.css" rel="stylesheet" />
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.3.0/dist/chart.umd.min.js"></script>
   <script src="/rds.js"></script>
   <script src="/socket.io/socket.io.js"></script>
 </head>
@@ -17,7 +18,12 @@
     <input type="button" id="toggleButton" value="모두 선택/해제"/>&nbsp;
     <input type="button" id="down_csv" value="Download CSV"/>
   </div>
-  <div id="checkboxContainer"></div> 
+  <div id="checkboxContainer"></div>
+  <div id="canvasContainer">
+    <canvas id="regionChart"></canvas>
+    <canvas id="instanceChart"></canvas>
+    <canvas id="engineChart"></canvas>
+  </div>
   <div id="rdsTotalCostContainer"><br></div><br>
   <div id="rdsTableContainer"></div>
   <script>

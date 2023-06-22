@@ -58,41 +58,40 @@ function logger(data, socket) {
 }
 
 exports.opt = async function ({socket, data}){
-  logger("rds start", socket);
-  var region_seq = data.number;
-  var id = data.role;
+  try{
+    logger("rds start", socket);
+    var region_seq = data.number;
+    var id = data.role;
 
-  const switchRegion = regions[Object.keys(regions)[region_seq]];
-  AWS.config.update({ region: switchRegion });
-  AWS.config.credentials = new AWS.TemporaryCredentials({
-    RoleArn: `arn:aws:iam::${id}:role/Smileshark-sysadmin`, // Replace with your ARN role
-  });
+    const switchRegion = regions[Object.keys(regions)[region_seq]];
+    AWS.config.update({ region: switchRegion });
+    AWS.config.credentials = new AWS.TemporaryCredentials({
+      RoleArn: `arn:aws:iam::${id}:role/Smileshark-sysadmin`, // Replace with your ARN role
+    });
 
 
-  const cloudwatch = new AWS.CloudWatch();
-  const cloudwatchGetMetricWidgetImage = util.promisify(cloudwatch.getMetricWidgetImage.bind(cloudwatch));
+    const cloudwatch = new AWS.CloudWatch();
+    const cloudwatchGetMetricWidgetImage = util.promisify(cloudwatch.getMetricWidgetImage.bind(cloudwatch));
 
-  const saveChartImage = async (chartOptions, fileName) => {
-    const widgetData = JSON.stringify(chartOptions);
-    const params = {
-      MetricWidget: widgetData,
-      OutputFormat: 'png',
+    const saveChartImage = async (chartOptions, fileName, instanceId) => {
+      const widgetData = JSON.stringify(chartOptions);
+      const params = {
+        MetricWidget: widgetData,
+        OutputFormat: 'png',
+      };
+    
+      try {
+        const imageResponse = await cloudwatchGetMetricWidgetImage(params);
+        const imageData = imageResponse.MetricWidgetImage;
+    
+        // Save the image data to a file
+        mkdir(`./rds_chart/${id}/${instanceId}`)
+        fs.writeFileSync(`./rds_chart/${id}/${fileName}`, imageData);
+        console.log(`Chart image saved to ${fileName}`);
+      } catch (error) {
+        console.error('Error saving chart image:', error);
+      }
     };
-  
-    try {
-      const imageResponse = await cloudwatchGetMetricWidgetImage(params);
-      const imageData = imageResponse.MetricWidgetImage;
-  
-      // Save the image data to a file
-      mkdir(`./rds_chart/${id}`)
-      fs.writeFileSync(`./rds_chart/${id}/${fileName}`, imageData);
-      console.log(`Chart image saved to ${fileName}`);
-    } catch (error) {
-      console.error('Error saving chart image:', error);
-    }
-  };
-
-  try{ 
     // RDS 인스턴스 리스트 가져오기
     const getAllRDSInstances = async () => {
       const rds = new AWS.RDS();
@@ -120,17 +119,16 @@ exports.opt = async function ({socket, data}){
           var startTime_esti = performance.now()
           socket.emit("opt_rds_list", {total_length : instances.length, length : ++counter, estimated : estimated * (instances.length - counter)});
           const rdsData = {
-            instance: {
-              DBInstanceIdentifier: instance.DBInstanceIdentifier,
-              Engine: instance.Engine,
-              DBInstanceClass: instance.DBInstanceClass,
-              EngineVersion: instance.EngineVersion,
-              AvailabilityZone: instance.AvailabilityZone
-            },
+            Region : switchRegion,
+            DBInstanceIdentifier: instance.DBInstanceIdentifier,
+            DBInstanceClass: instance.DBInstanceClass,
+            Engine: instance.Engine,
+            EngineVersion: instance.EngineVersion,
+            AvailabilityZone: instance.AvailabilityZone,
             maxCPUUsage: 0,
             maxMemoryUsage: 0,
+            maxReadLatency: 0,
             maxWriteLatency: 0,
-            maxReadLatency: 0
           };
     
           // 최대 CPU 사용률 조회
@@ -151,7 +149,7 @@ exports.opt = async function ({socket, data}){
           };
     
           const cpuMetricData = await cloudwatch.getMetricStatistics(cpuMetricParams).promise();
-          rdsData.maxCPUUsage = getMaxMetricValue(cpuMetricData.Datapoints, 'Maximum');
+          rdsData.maxCPUUsage = parseFloat(getMaxMetricValue(cpuMetricData.Datapoints, 'Maximum')).toFixed(2) + "%";
 
           const cpuChartOptions = {
             width: 600,
@@ -178,7 +176,7 @@ exports.opt = async function ({socket, data}){
               ],
             ],
           };
-          const cpuChartPromise = saveChartImage(cpuChartOptions, `cpu_chart_${instance.DBInstanceIdentifier}.png`);
+          const cpuChartPromise = saveChartImage(cpuChartOptions, `${instance.DBInstanceIdentifier}/cpu_chart.png`, instance.DBInstanceIdentifier);
 
           // 최대 메모리 사용률 조회
           const memoryMetricParams = {
@@ -193,11 +191,11 @@ exports.opt = async function ({socket, data}){
             StartTime: new Date(Date.now() - 1209600000), // 2주간 데이터 조회
             EndTime: new Date(),
             Period: 3600, // 조회 주기 (1시간)
-            Statistics: ['Maximum'] // 최대값 조회
+            Statistics: ['Minimum'] // 최대값 조회
           };
     
           const memoryMetricData = await cloudwatch.getMetricStatistics(memoryMetricParams).promise();
-          rdsData.maxMemoryUsage = getMaxMetricValue(memoryMetricData.Datapoints, 'Maximum');
+          rdsData.maxMemoryUsage = (parseFloat(getMaxMetricValue(memoryMetricData.Datapoints, 'Minimum')) / 1000000).toFixed(2) + "M";
 
           // Generate and save memory chart image
           const memoryChartOptions = {
@@ -220,11 +218,11 @@ exports.opt = async function ({socket, data}){
                 'FreeableMemory',
                 'DBInstanceIdentifier',
                 instance.DBInstanceIdentifier,
-                { id: 'm1', label: 'Maximum', visible: true, stat: 'Maximum' },
+                { id: 'm1', label: 'Minimum', visible: true, stat: 'Minimum' },
               ],
             ],
           };
-          const memoryChartPromise = saveChartImage(memoryChartOptions, `memory_chart_${instance.DBInstanceIdentifier}.png`);
+          const memoryChartPromise = saveChartImage(memoryChartOptions, `${instance.DBInstanceIdentifier}/memory_chart.png`, instance.DBInstanceIdentifier);
 
           // 최대 쓰기 지연 시간 조회
           const writeLatencyMetricParams = {
@@ -243,7 +241,7 @@ exports.opt = async function ({socket, data}){
           };
     
           const writeLatencyMetricData = await cloudwatch.getMetricStatistics(writeLatencyMetricParams).promise();
-          rdsData.maxWriteLatency = getMaxMetricValue(writeLatencyMetricData.Datapoints, 'Maximum');
+          rdsData.maxWriteLatency = parseFloat(getMaxMetricValue(writeLatencyMetricData.Datapoints, 'Maximum')).toExponential(2);
           // Generate and save write latency chart image
           const writeLatencyChartOptions = {
             width: 600,
@@ -269,7 +267,7 @@ exports.opt = async function ({socket, data}){
               ],
             ],
           };
-          const writeLatencyChartPromise = saveChartImage(writeLatencyChartOptions, `write_latency_chart_${instance.DBInstanceIdentifier}.png`);
+          const writeLatencyChartPromise = saveChartImage(writeLatencyChartOptions, `${instance.DBInstanceIdentifier}/write_latency_chart.png`, instance.DBInstanceIdentifier);
 
           // 최대 읽기 지연 시간 조회
           const readLatencyMetricParams = {
@@ -288,7 +286,7 @@ exports.opt = async function ({socket, data}){
           };
     
           const readLatencyMetricData = await cloudwatch.getMetricStatistics(readLatencyMetricParams).promise();
-          rdsData.maxReadLatency = getMaxMetricValue(readLatencyMetricData.Datapoints, 'Maximum');
+          rdsData.maxReadLatency = parseFloat(getMaxMetricValue(readLatencyMetricData.Datapoints, 'Maximum')).toExponential(2);
 
           // Generate and save read latency chart image
           const readLatencyChartOptions = {
@@ -315,7 +313,7 @@ exports.opt = async function ({socket, data}){
               ],
             ],
           };
-          const readLatencyChartPromise = saveChartImage(readLatencyChartOptions, `read_latency_chart_${instance.DBInstanceIdentifier}.png`);
+          const readLatencyChartPromise = saveChartImage(readLatencyChartOptions, `${instance.DBInstanceIdentifier}/read_latency_chart.png`, instance.DBInstanceIdentifier);
           saveChartImagePromises.push(cpuChartPromise, memoryChartPromise, writeLatencyChartPromise, readLatencyChartPromise);
           var endTime_esti = performance.now()
           estimated = endTime_esti - startTime_esti
@@ -350,14 +348,13 @@ exports.opt = async function ({socket, data}){
     
         // 2주간 최대 CPU, 메모리, 읽기/쓰기 지연 시간 정보를 JSON 형식으로 출력
         const jsonData = JSON.stringify(data, null, 2);
-        console.log('2주간 최대 성능 정보(JSON):\n', jsonData);
-        logger(jsonData, socket)
-    
+        socket.emit("send_opted_rds", jsonData); 
         // // JSON 데이터를 파일로 저장
         // fs.writeFileSync('rds_performance.json', jsonData);
         // console.log('2주간 최대 성능 정보가 성공적으로 저장되었습니다: rds_performance.json'); 
       })
       .catch(error => {
+        socket.emit("send_opted_rds", JSON.stringify([]));
         console.error('에러:', error);
       }); 
 

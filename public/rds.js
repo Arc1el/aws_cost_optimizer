@@ -9,11 +9,13 @@ $(document).ready(function() {
       console.log(data);
     })
     
+    var rds_total_length = 0;
+    var rds_total_data = [];
     socket.on('opt_rds_list', function (data){
       var total_length = data.total_length;
+      rds_total_length += total_length;
       var now_length = data.length;
       var estimated_time = parseFloat(data.estimated / 1000).toFixed(2) + " Seconds";
-      console.log("get opt list " + data);
       var spanEle = document.getElementById('loadingspan');
       spanEle.innerHTML = `<br><img src='./loading.gif' width='15px'/> Generating Tables .... In Progress : ${now_length}/${total_length} .... Estimated Time : ${estimated_time}<br>`;
       
@@ -29,7 +31,7 @@ $(document).ready(function() {
   
       // Use setTimeout to delay the width adjustment and trigger the animation
       setTimeout(function() {
-          loadingDiv.style.width = `calc(${now_length}/${total_length} * 98%)`;
+          loadingDiv.style.width = `calc(${now_length}/${total_length} * 98%)`; 
       }, 0);
     });
 
@@ -278,42 +280,35 @@ $(document).ready(function() {
     }
   
     function createTable(data) {
-      
       var role = document.getElementById("rolearn").value;
       var table = document.createElement("table");
       table.classList.add("table");
-  
+      var id = document.getElementById("rolearn").value;
       var thead = document.createElement("thead");
       var tr = document.createElement("tr");
-      
+    
       // Set table headers
-      var headers = ["리전", "인스턴스이름", "인스턴스아이디", "기존 유형", "가격", "추천유형", "가격", "2주 CPU", "2주 MEM", "2주 CPU 최대 사용량 차트", "2주 MEM 최대 사용량 차트"];
-      headers.forEach(function(header) {
+      var headers = ["리전", "DB 네임", "인스턴스 유형", "엔진", "엔진버전", "AZ", "2주 CPU", "2주 Free MEM", "2주 읽기지연", "2주 쓰기지연", "메트릭 차트"];
+      headers.forEach(function (header) {
         var th = document.createElement("th");
         th.textContent = header;
         tr.appendChild(th);
       });
-      
+    
       thead.appendChild(tr);
       table.appendChild(thead);
-  
+    
       var tbody = document.createElement("tbody");
-      data.forEach(function(item) {
+      data.forEach(function (item) {
         gen_flag = true;
         count = 0;
         id = "";
+        metric = "";
         var tr = document.createElement("tr");
         for (var key in item) {
-          //console.log(item["maxCpuUsage"])
-          if (item["maxCpuUsage"] === "0 %"){
-            console.log("zero CPU deleted")
-            gen_flag = false;
-            continue;
-          }
-  
           if (item.hasOwnProperty(key)) {
-            count ++
-            if (count == 3){
+            count++
+            if (count == 2) {
               id = item[key];
               //console.log(id)
             }
@@ -322,46 +317,92 @@ $(document).ready(function() {
             tr.appendChild(td);
           }
         }
+        var chart_div = document.createElement("div");
         var chart = document.createElement("td");
-        var image = document.createElement("img");
-        var img_src = "/" + role + "/" + id + "/chart.png"
-        image.src = img_src;
-        image.alt = "No Data";
-        image.style.maxWidth = "100%"; // 이미지의 최대 가로 크기를 설정합니다.
-        image.style.height = "auto"; // 이미지의 세로 크기를 자동으로 조정합니다.
-  
-        window.addEventListener("resize", function() {
-          image.style.maxWidth = "80%";
-        });
-  
-        chart.appendChild(image);
-        tr.appendChild(chart);
-  
-        var mem_chart = document.createElement("td");
-        var mem_image = document.createElement("img");
-        var mem_img_src = "/" + role + "/" + id + "/mem_used_percent_chart.png"
+    
+        var image1 = document.createElement("img");
+        var img1_src = "/" + role + "/" + id + "/cpu_chart.png"
+        image1.src = img1_src;
+        image1.alt = "No Data";
+        image1.style.maxWidth = "100%";
+        image1.style.height = "auto";
+    
+        var image2 = document.createElement("img");
+        var img2_src = "/" + role + "/" + id + "/memory_chart.png"
+        image2.src = img2_src;
+        image2.alt = "No Data";
+        image2.style.maxWidth = "100%";
+        image2.style.height = "auto";
+    
+        var image3 = document.createElement("img");
+        var img3_src = "/" + role + "/" + id + "/read_latency_chart.png"
+        image3.src = img3_src;
+        image3.alt = "No Data";
+        image3.style.maxWidth = "100%";
+        image3.style.height = "auto";
+    
+        var image4 = document.createElement("img");
+        var img4_src = "/" + role + "/" + id + "/write_latency_chart.png"
+        image4.src = img4_src;
+        image4.alt = "No Data";
+        image4.style.maxWidth = "100%";
+        image4.style.height = "auto";
+    
+        window.addEventListener("resize", function () {
+          var tableWidth = imageTable.offsetWidth;
+          var cellWidth = tableWidth;
+          var maxWidth = "100%";
         
-        mem_image.src = mem_img_src;
-        mem_image.alt = "No Data";
-        mem_image.style.maxWidth = "100%"; // 이미지의 최대 가로 크기를 설정합니다.
-        mem_image.style.height = "auto"; // 이미지의 세로 크기를 자동으로 조정합니다.
-  
-        window.addEventListener("resize", function() {
-          mem_image.style.maxWidth = "80%";
+          // Resize images
+          image1.style.maxWidth = maxWidth;
+          image2.style.maxWidth = maxWidth;
+          image3.style.maxWidth = maxWidth;
+          image4.style.maxWidth = maxWidth;
+        
+          // Resize cells
+          imageCell1.style.width = cellWidth + "px";
+          imageCell2.style.width = cellWidth + "px";
+          imageCell3.style.width = cellWidth + "px";
+          imageCell4.style.width = cellWidth + "px";
         });
-  
-        mem_chart.appendChild(mem_image);
-        tr.appendChild(mem_chart);
-        if(gen_flag){
+    
+        var imageTable = document.createElement("table"); // 2x2 이미지 테이블
+        var imageTbody = document.createElement("tbody");
+    
+        var imageRow1 = document.createElement("tr");
+        var imageRow2 = document.createElement("tr");
+    
+        var imageCell1 = document.createElement("td");
+        var imageCell2 = document.createElement("td");
+        var imageCell3 = document.createElement("td");
+        var imageCell4 = document.createElement("td");
+    
+        imageCell1.appendChild(image1);
+        imageCell2.appendChild(image2);
+        imageRow1.appendChild(imageCell1);
+        imageRow1.appendChild(imageCell2);
+    
+        imageCell3.appendChild(image3);
+        imageCell4.appendChild(image4);
+        imageRow2.appendChild(imageCell3);
+        imageRow2.appendChild(imageCell4);
+    
+        imageTbody.appendChild(imageRow1);
+        imageTbody.appendChild(imageRow2);
+        imageTable.appendChild(imageTbody);
+        chart.appendChild(imageTable);
+        tr.appendChild(chart);
+    
+        if (gen_flag) {
           tbody.appendChild(tr);
-        } 
+        }
       });
       table.appendChild(tbody);
       // table.appendChild(colgroup);
       table.classList.add("csv");
-  
+    
       return table;
-    }
+    }    
   
     async function show() {
       var role = document.getElementById("rolearn").value;
@@ -387,6 +428,7 @@ $(document).ready(function() {
           socket.emit("rds_opt_req", {number, role});
           socket.once("send_opted_rds", (data) => {
             var instances = JSON.parse(data);
+            rds_total_data = rds_total_data.concat(instances);
             var table = createTable(instances);
             if (
               table &&
@@ -397,8 +439,8 @@ $(document).ready(function() {
             } else {
               // console.log("테이블에 내용이 없습니다.");
             }
-            var costTable = createCostTable(instances, number);
-            costContainer.appendChild(costTable);
+            // var costTable = createCostTable(instances, number);
+            // costContainer.appendChild(costTable);
     
             if (costContainer.firstChild instanceof HTMLSpanElement) {
               costContainer.removeChild(costContainer.firstChild);
@@ -408,12 +450,151 @@ $(document).ready(function() {
           });
         });
       }
-    
       // All sequential operations completed
       // console.log("모든 비동기 작업 완료");
+      console.log(rds_total_data);
+      document.getElementById('canvasContainer').style.display='flex';
+      var regionCount = {};
+      var classCount = {};
+      var engineCount = {};
+      rds_total_data.forEach(item => {
+        if (regionCount[item.Region]) {
+          regionCount[item.Region]++;
+        } else {
+          regionCount[item.Region] = 1;
+        }
+
+        if (classCount[item.DBInstanceClass]) {
+          classCount[item.DBInstanceClass]++;
+        } else {
+          classCount[item.DBInstanceClass] = 1;
+        }
+
+        if (engineCount[item.Engine]) {
+          engineCount[item.Engine]++;
+        } else {
+          engineCount[item.Engine] = 1;
+        }
+      });
+
+      var labels = Object.keys(regionCount);
+      var values = Object.values(regionCount);
+      var ctx = document.getElementById('regionChart').getContext('2d');
+      new Chart(ctx, {
+        type: 'pie',
+        data: {
+          labels: labels,
+          datasets: [{
+            label: 'Region Count',
+            data: values,
+            backgroundColor: [
+              '#8e9aaf',
+              '#cbc0d3',
+              "#efd3d7",
+              "#feeafa",
+              '#dee2ff', 
+              // Add more colors if needed
+            ],
+            borderWidth: 1
+          }]
+        },
+        options: {
+          responsive: true,
+          title: {
+            display: true,
+            text: 'Region Count'
+          },
+          legend: {
+            display: true,
+            position: 'right',
+            labels: {
+              filter: function (legendItem, chartData) {
+                return chartData.datasets[legendItem.datasetIndex].labelIndex < 5;
+              }
+            }
+          }
+        }
+      });
+      
+      var labels2 = Object.keys(classCount);
+      var values2 = Object.values(classCount);
+      var ctx = document.getElementById('instanceChart').getContext('2d');
+      new Chart(ctx, {
+        type: 'pie',
+        data: {
+          labels: labels2,
+          datasets: [{
+            label: 'Instance Type Count',
+            data: values2,
+            backgroundColor: [
+              '#8e9aaf',
+              '#cbc0d3',
+              "#efd3d7",
+              "#feeafa",
+              '#dee2ff', 
+              // Add more colors if needed
+            ],
+            borderWidth: 1
+          }]
+        },
+        options: {
+          responsive: true,
+          title: {
+            display: true,
+            text: 'Instance Type Count'
+          },
+          legend: {
+            display: true,
+            position: 'right',
+            labels: {
+              filter: function (legendItem, chartData) {
+                return chartData.datasets[legendItem.datasetIndex].labelIndex < 5;
+              }
+            }
+          }
+        }
+      });
+
+      var labels3 = Object.keys(engineCount);
+      var values3 = Object.values(engineCount);
+      var ctx = document.getElementById('engineChart').getContext('2d');
+      new Chart(ctx, {
+        type: 'pie',
+        data: {
+          labels: labels3,
+          datasets: [{
+            label: 'Engine Count',
+            data: values3,
+            backgroundColor: [
+              '#8e9aaf',
+              '#cbc0d3',
+              "#efd3d7",
+              "#feeafa",
+              '#dee2ff', 
+              // Add more colors if needed
+            ],
+            borderWidth: 1
+          }]
+        },
+        options: {
+          responsive: true,
+          title: {
+            display: true,
+            text: 'Engine Count'
+          },
+          legend: {
+            display: true,
+            position: 'right',
+            labels: {
+              filter: function (legendItem, chartData) {
+                return chartData.datasets[legendItem.datasetIndex].labelIndex < 5;
+              }
+            }
+          }
+        }
+      });
     }
     
-   
     function downloadTablesAsCSV() {
       var tableClass = 'csv'
       var filename = 'result.csv'

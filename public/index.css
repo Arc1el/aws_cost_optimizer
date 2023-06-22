@@ -88,3 +88,14 @@ th{
 #loadingdiv{
   border-radius: 5px;
 }
+
+#canvasContainer {
+  display: none;
+  max-height : 50vh;
+  justify-content: space-between;
+}
+
+canvas {
+  flex: 1;
+  margin-right: 10px; /* 캔버스 요소 사이의 간격 */
+}
