@@ -14,6 +14,49 @@ router.get('/rds', function(req, res, next) {
   res.render('rds.html');
 });
 
+router.get('/cf', function(req, res, next) {
+  try{
+    const AWS = require('aws-sdk');
+    AWS.config.update({ region: 'ap-northeast-2' });  
+
+    // CloudFront 클라이언트 생성
+    const cloudfront = new AWS.CloudFront();
+
+    // CloudFront 배포 ID 설정
+    const distributionId = '';
+
+    // 배포 ID의 오브젝트 리스트 가져오기
+    cloudfront.listObjects({ DistributionId: distributionId }, (err, data) => {
+      if (err) {
+        console.error('Error retrieving object list:', err);
+      } else {
+        const objects = data.Objects.Items;
+        if (objects.length > 0) {
+          console.log('Object List:');
+          objects.forEach((object) => {
+            console.log(' -', object.Key);
+    
+            // 각 객체의 사용량 가져오기
+            cloudfront.getCloudFrontOriginAccessIdentityConfig({ Id: object.Id }, (err, data) => {
+              if (err) {
+                console.error('Error retrieving object usage:', err);
+              } else {
+                console.log('   Usage:', data.CloudFrontOriginAccessIdentityConfig.UsageProfile);
+              }
+            });
+          });
+        } else {
+          console.log('No objects found for the specified distribution ID.');
+        }
+      }
+    });
+  }catch (err) {
+    console.log(err);
+  }
+  
+  res.send(200);
+});
+
 // router.get('/ec2/:id', async function(req, res, next) {
 //   const AWS = require('aws-sdk');
 //   AWS.config.update({ region: 'ap-northeast-2' }); 
